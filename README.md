@@ -53,12 +53,12 @@ Simply visit the [GitHub Pages link](https://echooff3.github.io/lotto-scratcher/
    cd lotto-scratcher
    ```
 
-3. Open `Index.html` in your web browser:
-   - **Windows**: Double-click `Index.html` or right-click → Open with → Your Browser
+3. Open `index.html` in your web browser:
+   - **Windows**: Double-click `index.html` or right-click → Open with → Your Browser
    - **Mac/Linux**: 
      ```bash
-     open Index.html  # Mac
-     xdg-open Index.html  # Linux
+     open index.html  # Mac
+     xdg-open index.html  # Linux
      ```
    
    Or use a local server:
