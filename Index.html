@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Scratch Match Game</title>
+
+    <!-- No external dependencies needed; using vanilla JS and Canvas -->
+
+    <style>
+        /* CSS Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        #particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #score-change {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 16px;
+            color: yellow;
+            opacity: 0;
+            transition: opacity 0.5s;
+            animation: score-pop 1s ease-out;
+        }
+
+        @keyframes score-pop {
+            0% { transform: scale(0); opacity: 1; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        #score-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .grid-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            margin: 0 auto;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            width: 100%;
+            height: 100%;
+        }
+
+        .emoji {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            transition: opacity 0.5s;
+        }
+
+        .dimmed {
+            opacity: 0.3;
+        }
+
+        #scratch-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .progress-bar {
+            width: 600px;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin: 5px auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        #progress-text {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            cursor: pointer;
+        }
+
+        .splash-screen.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .splash-content {
+            background: white;
+            color: black;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 20px;
+            animation: splash-appear 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes splash-appear {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        .particle {
+            position: absolute;
+            font-size: 24px;
+            animation: fall 3s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            animation: bounce 0.6s ease-in-out;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+            40%, 43% { transform: translateY(-10px); }
+            70% { transform: translateY(-5px); }
+            90% { transform: translateY(-2px); }
+        }
+
+        @media (max-width: 600px) {
+            .grid-container {
+                width: 350px;
+                height: 350px;
+            }
+            .emoji {
+                font-size: 14px;
+            }
+            .progress-bar {
+                width: 350px;
+                height: 12px;
+            }
+            .splash-content {
+                font-size: 16px;
+                padding: 10px;
+            }
+            .particle {
+                font-size: 18px;
+            }
+            h1 {
+                font-size: 16px;
+            }
+            #score-display {
+                font-size: 16px;
+            }
+            #progress-text {
+                font-size: 12px;
+            }
+            button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HTML Body Content -->
+    <div id="particle-container"></div>
+    <div id="score-change"></div>
+    <div id="score-display">Total Score: 0</div>
+    <div class="container">
+        <h1>Emoji Scratch Match Game</h1>
+        <p>Scratch the big square to reveal and check for wins!</p>
+        <div id="progress-text">Scratched: 0%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="grid-container">
+            <canvas id="scratch-canvas"></canvas>
+            <div class="grid" id="grid">
+                <!-- 100 emojis will be generated here -->
+            </div>
+        </div>
+        <button id="reset-btn">Play Again</button>
+    </div>
+
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splash-screen">
+        <div class="splash-content" id="splash-content">
+            <!-- Splash message here -->
+        </div>
+    </div>
+
+    <script>
+        // JavaScript Logic
+        const canvas = document.getElementById('scratch-canvas');
+        const ctx = canvas.getContext('2d');
+        const gridEl = document.getElementById('grid');
+        const scoreDisplay = document.getElementById('score-display');
+        const scoreChangeEl = document.getElementById('score-change');
+        const resetBtn = document.getElementById('reset-btn');
+        const splashScreen = document.getElementById('splash-screen');
+        const splashContent = document.getElementById('splash-content');
+        const progressText = document.getElementById('progress-text');
+        const progressFill = document.getElementById('progress-fill');
+        const particleContainer = document.getElementById('particle-container');
+
+        // Set canvas size to match grid-container (600x600 desktop, 350x350 mobile)
+        function setCanvasSize() {
+            const container = document.querySelector('.grid-container');
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+        }
+        setCanvasSize();
+        window.addEventListener('resize', setCanvasSize);
+
+        let totalScore = 0;
+        const emojis = ['🍎', '🍊', '🍋', '🍉', '🍇', '🍓', '🥭', '🍈', '🍑'];
+        let emojiElements = [];
+        let revealed = false;
+        let scratchedPercentage = 0;
+
+        // Helper function to get board as 2D array
+        function getBoard() {
+            const board = [];
+            for (let r = 0; r < 10; r++) {
+                board[r] = [];
+                for (let c = 0; c < 10; c++) {
+                    board[r][c] = emojiElements[r * 10 + c].textContent;
+                }
+            }
+            return board;
+        }
+
+        // Function to initialize grid and scratch layer
+        function initGame() {
+            gridEl.innerHTML = '';
+            emojiElements = [];
+            for (let i = 0; i < 100; i++) {
+                const emojiDiv = document.createElement('div');
+                emojiDiv.className = 'emoji';
+                emojiDiv.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                gridEl.appendChild(emojiDiv);
+                emojiElements.push(emojiDiv);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#C0C0C0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            canvas.style.display = 'block'; // Ensure canvas is visible
+            revealed = false;
+            scratchedPercentage = 0;
+            progressText.textContent = 'Scratched: 0%';
+            progressFill.style.width = '0%';
+            splashScreen.classList.remove('show');
+            // Clear particles
+            particleContainer.innerHTML = '';
+            // Clear splash content
+            splashContent.innerHTML = '';
+        }
+
+        // Function to scratch the canvas and calculate percentage
+        function scratch(x, y) {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Calculate scratched percentage
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let scratchedPixels = 0;
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                if (imageData.data[i + 3] === 0) scratchedPixels++;
+            }
+            scratchedPercentage = Math.min(100, Math.round((scratchedPixels / (canvas.width * canvas.height)) * 100));
+            progressText.textContent = `Scratched: ${scratchedPercentage}%`;
+            progressFill.style.width = `${scratchedPercentage}%`;
+
+            if (scratchedPercentage >= 80 && !revealed) {
+                revealEmojis();
+            }
+        }
+
+        // Function to find chains (horizontal, vertical, diagonal)
+        function findChains(board, minLength = 5) {
+            let chains = [];
+            const directions = [
+                [0, 1], // right
+                [1, 0], // down
+                [1, 1], // down-right
+                [1, -1] // down-left
+            ];
+            const visited = Array(10).fill().map(() => Array(10).fill(false));
+
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 10; c++) {
+                    if (visited[r][c]) continue;
+                    for (let [dr, dc] of directions) {
+                        let length = 1;
+                        let positions = [[r, c]];
+                        let nr = r + dr, nc = c + dc;
+                        while (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && board[nr][nc] === board[r][c]) {
+                            length++;
+                            positions.push([nr, nc]);
+                            visited[nr][nc] = true;
+                            nr += dr;
+                            nc += dc;
+                        }
+                        if (length >= minLength) {
+                            chains.push({ emoji: board[r][c], positions, length });
+                        }
+                    }
+                }
+            }
+            return chains;
+        }
+
+        // Function to find groups (connected components using BFS)
+        function findGroups(board, minSize = 5) {
+            let groups = [];
+            const visited = Array(10).fill().map(() => Array(10).fill(false));
+
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 10; c++) {
+                    if (visited[r][c]) continue;
+                    const queue = [[r, c]];
+                    const positions = [[r, c]];
+                    visited[r][c] = true;
+                    const emoji = board[r][c];
+                    while (queue.length) {
+                        const [cr, cc] = queue.shift();
+                        for (let [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                            const nr = cr + dr, nc = cc + dc;
+                            if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && !visited[nr][nc] && board[nr][nc] === emoji) {
+                                visited[nr][nc] = true;
+                                queue.push([nr, nc]);
+                                positions.push([nr, nc]);
+                            }
+                        }
+                    }
+                    if (positions.length >= minSize) {
+                        groups.push({ emoji, positions });
+                    }
+                }
+            }
+            return groups;
+        }
+
+        // Function to reveal and calculate win/loss
+        function revealEmojis() {
+            revealed = true;
+            // Clear the remaining gray mask
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const board = getBoard();
+            let score = 0;
+            let winningIndices = new Set();
+            let winCount = 0;
+
+            // Full rows
+            for (let row = 0; row < 10; row++) {
+                if (board[row].every(e => e === board[row][0])) {
+                    score += 50;
+                    winCount++;
+                    for (let col = 0; col < 10; col++) {
+                        winningIndices.add(row * 10 + col);
+                    }
+                }
+            }
+            // Full columns
+            for (let col = 0; col < 10; col++) {
+                if (board.map(r => r[col]).every(e => e === board[0][col])) {
+                    score += 50;
+                    winCount++;
+                    for (let row = 0; row < 10; row++) {
+                        winningIndices.add(row * 10 + col);
+                    }
+                }
+            }
+            // Diagonals
+            let mainDiag = board.map((r, i) => r[i]);
+            if (mainDiag.every(e => e === mainDiag[0])) {
+                score += 100;
+                winCount++;
+                for (let i = 0; i < 10; i++) {
+                    winningIndices.add(i * 10 + i);
+                }
+            }
+            let antiDiag = board.map((r, i) => r[9 - i]);
+            if (antiDiag.every(e => e === antiDiag[0])) {
+                score += 100;
+                winCount++;
+                for (let i = 0; i < 10; i++) {
+                    winningIndices.add(i * 10 + (9 - i));
+                }
+            }
+            // All same
+            const allSame = board.flat().every(e => e === board[0][0]);
+            if (allSame) {
+                score += 500;
+                winCount++;
+                winningIndices = new Set(Array.from({length: 100}, (_, i) => i));
+            }
+
+            // Chains
+            const chains = findChains(board);
+            chains.forEach(chain => {
+                score += chain.length * 5; // 5 points per length in chain
+                winCount++;
+                chain.positions.forEach(([r, c]) => winningIndices.add(r * 10 + c));
+            });
+
+            // Groups
+            const groups = findGroups(board);
+            groups.forEach(group => {
+                score += group.positions.length * 3; // 3 points per group size
+                winCount++;
+                group.positions.forEach(([r, c]) => winningIndices.add(r * 10 + c));
+            });
+
+            // Multiplier for multiple wins
+            let multiplier = 1;
+            if (winCount >= 2) multiplier = 1.5;
+            if (winCount >= 3) multiplier = 2;
+            if (winCount >= 5) multiplier = 2.5;
+            score *= multiplier;
+
+            // Dim non-winning emojis
+            emojiElements.forEach((el, index) => {
+                if (!winningIndices.has(index)) {
+                    el.classList.add('dimmed');
+                }
+            });
+
+            // Show splash screen with particles
+            if (score > 0) {
+                splashContent.innerHTML = `<div>You Win! +${Math.round(score)} points (${winCount} wins, x${multiplier} multiplier)</div>`;
+                createParticles(board[Math.floor(Math.random() * 10)][Math.floor(Math.random() * 10)], 50);
+                totalScore += Math.round(score);
+            } else {
+                splashContent.innerHTML = `<div>Loss! No matches found.</div>`;
+                createParticles('❌', 50);
+            }
+            scoreDisplay.textContent = `Total Score: ${totalScore}`;
+            splashScreen.classList.add('show');
+        }
+
+        // Function to create falling particles across the screen
+        function createParticles(emoji, count) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emoji;
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 2 + 's';
+                particle.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                particleContainer.appendChild(particle);
+            }
+        }
+
+        // Dismiss splash screen on click/tap
+        splashScreen.addEventListener('click', () => {
+            splashScreen.classList.remove('show');
+        });
+
+        // Mouse events
+        let isScratching = false;
+        canvas.addEventListener('mousedown', (e) => {
+            isScratching = true;
+            const rect = canvas.getBoundingClientRect();
+            scratch(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (isScratching) {
+                const rect = canvas.getBoundingClientRect();
+                scratch(e.clientX - rect.left, e.clientY - rect.top);
+            }
+        });
+        canvas.addEventListener('mouseup', () => isScratching = false);
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            scratch(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            scratch(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+            totalScore = 0;
+            scoreDisplay.textContent = 'Total Score: 0';
+            initGame();
+        });
+
+        // Initialize on load
+        initGame();
+    </script>
+</body>
+</html>
